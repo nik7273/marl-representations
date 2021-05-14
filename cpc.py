@@ -98,3 +98,9 @@ class CPC(nn.Module):
 
         return output, hidden # return every frame
         #return output[:,-1,:], hidden # only return the last frame per utt
+
+def mesh_inputs():
+    """
+    Combine input observations to feed into CPC.
+    """
+    pass

@@ -5,7 +5,7 @@ import torch.nn as nn
 import supersuit as ss
 from pettingzoo.butterfly import pistonball_v4
 from pettingzoo.butterfly import cooperative_pong_v2
-from stable_baselines3 import PPO
+from ppo import PPO
 from stable_baselines3.ppo import CnnPolicy
 
 def main():
@@ -75,26 +75,36 @@ def main():
                     clip_range=0.2,
                     clip_range_vf=1) # TODO: check and fix
         models[agent] = Agent(args, env.action_spaces[agent].n, model, central_rep)
-        memory[agent] = ReplayMemory() # figure this out, it's probably just a typical replaybuffer
-        val_memory[agent] = ReplayMemory()
-            
-    T, converged = 0, False
-    while not converged:
-        i = 0
-        env.reset()
-        for agent in env.agent_iter():
-            if i % len(env.agents):
-                T += 1
-                if T > args.evaluation_size:
-                    converged=True
-                    break
-            observation, reward, done, info = env.last()
-            action = models[agent].action(observation) if not done else None
-            env.step(action)
-            val_memory[agent].append(torch.tensor(observation), None, None, done)
-            i += 1
-    
 
-    
+    # Training
+    set_mode(models)
+    t, converged = 0, False
+    progress_bar = tqdm(total=args.max_horizon) # TODO: add to args
+    while not converged:
+        env.reset()
+        i = 0
+        for agent in env.agent_iter():
+            i += 1
+            if i % len(env.agents):
+                progress_bar.update(1)
+                t += 1
+                if t > args.max_horizon:
+                    converged = True
+                    break
+
+            observation, reward, done, info = env.last()
+
+             action = models[agent].act(torch.tensor(observation))
+            if not done:
+                env.step(action)  # Step
+            else:
+                env.step(None)
+
+            # Train
+            models[agent].learn()
+            # Train central representation
+            central_rep.learn()
+            
+            
 if __name__ == '__main__':
     main()
