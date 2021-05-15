@@ -7,6 +7,7 @@ from pettingzoo.butterfly import pistonball_v4
 from pettingzoo.butterfly import cooperative_pong_v2
 from ppo import PPO
 from stable_baselines3.ppo import CnnPolicy
+from agent import Agent, ObsBuffer, set_mode
 
 def main():
     seed = torch.randint(10000)
@@ -47,13 +48,6 @@ def main():
     env = ss.concat_vec_envs_v0(env, 8, num_cpus=4, base_class='stable_baselines3')
     env.reset()
 
-    # Check necessity of all of this
-    metrics = {'steps': [], 'rewards': {}, 'q_values': {}, 'best_avg_reward': {}}
-    for agent in env.agents:
-        metrics['rewards'][agent] = []
-        metrics['q_values'][agent] = []
-        metrics['best_avg_reward'][agent] = -float("inf")
-
     models = {} # agent models
     memory = {} # execution memory
     val_memory = {} # validation memory
@@ -80,6 +74,7 @@ def main():
     set_mode(models)
     t, converged = 0, False
     progress_bar = tqdm(total=args.max_horizon) # TODO: add to args
+    obs_buffer = ObsBuffer(self.num_timesteps) # num_timesteps
     while not converged:
         env.reset()
         i = 0
@@ -94,16 +89,18 @@ def main():
 
             observation, reward, done, info = env.last()
 
-             action = models[agent].act(torch.tensor(observation))
+            action = models[agent].act(torch.tensor(observation))
             if not done:
                 env.step(action)  # Step
             else:
                 env.step(None)
 
-            # Train
-            models[agent].learn()
-            # Train central representation
-            central_rep.learn()
+            if i % args.update_period: # TODO: add update_period to args
+                obs_buffer.append(observation)
+                # Train
+                models[agent].update_params()
+                # Train central representation
+                central_rep.update_params(observation_buffer)
             
             
 if __name__ == '__main__':

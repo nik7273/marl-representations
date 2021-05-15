@@ -4,6 +4,7 @@ Single agent that interacts with central learner and learns its own parameters.
 import os
 import torch
 import torch.nn as nn
+from collections import deque 
 
 class Agent:
     def __init__(self, args, action_space, model, central_rep):
@@ -14,7 +15,7 @@ class Agent:
     def action(self, state):
         return torch.randint(len(self.action_space), size=(1,)).long()
 
-    def learn(self):
+    def update_params(self):
         # learn for a specific agent is called during training
         # we want to use the CPC loss function as part of training for this model
         # but the CPC is centralized; so we somehow need to share parameter updates in this central model???
@@ -31,3 +32,18 @@ def set_mode(models, mode="train"):
             models[agent].eval()
     else:
         raise Exception("mode does not exist")
+
+class ObsBuffer:
+    def __init__(self, max_len):
+        self.buf = deque([])
+        self.max_len = max_len
+
+    def append(self, new_obs):
+        if len(self.buf) >= self.max_len:
+            self.buf.popleft()
+        self.buf.append(new_obs)
+
+    def drain(self):
+        while self.buf:
+            self.buf.popleft()
+    
