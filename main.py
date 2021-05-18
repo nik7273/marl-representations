@@ -6,6 +6,7 @@ import supersuit as ss
 from pettingzoo.butterfly import pistonball_v4
 from pettingzoo.butterfly import cooperative_pong_v2
 from ppo import PPO
+from dqn import DQN
 from stable_baselines3.ppo import CnnPolicy
 from agent import Agent, ObsBuffer, set_mode
 
@@ -55,19 +56,20 @@ def main():
     central_rep = CPC(args.num_timesteps, args.batch_size, args.seq_len) # TODO: add to args
     
     for agent in env.agents:
-        model = PPO(CnnPolicy,
-                    env,
-                    verbose=3,
-                    gamma=0.99,
-                    n_steps=125,
-                    ent_coef=0.01,
-                    learning_rate=0.00025,
-                    vf_coef=0.5,
-                    max_grad_norm=0.5,
-                    gae_lambda=0.95,
-                    n_epochs=4,
-                    clip_range=0.2,
-                    clip_range_vf=1) # TODO: check and fix
+        # model = PPO(CnnPolicy,
+        #             env,
+        #             verbose=3,
+        #             gamma=0.99,
+        #             n_steps=125,
+        #             ent_coef=0.01,
+        #             learning_rate=0.00025,
+        #             vf_coef=0.5,
+        #             max_grad_norm=0.5,
+        #             gae_lambda=0.95,
+        #             n_epochs=4,
+        #             clip_range=0.2,
+        #             clip_range_vf=1) # TODO: check and fix
+        model = DQN(args, env.action_spaces[agent])
         models[agent] = Agent(args, env.action_spaces[agent].n, model, central_rep)
 
     # Training
@@ -101,7 +103,7 @@ def main():
                 models[agent].update_params()
                 # Train central representation
                 central_rep.update_params(observation_buffer)
-            
-            
+
+
 if __name__ == '__main__':
     main()

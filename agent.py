@@ -9,7 +9,7 @@ from collections import deque
 class Agent:
     def __init__(self, args, action_space, model, central_rep):
         self.args = args
-        self.model = model
+        self.model = model # ex. PPO, but starting simple with DQN
         self.central_rep = central_rep
         self.optimizer = optim.Adam(self.model.parameters(), lr=args.learning_rate, eps=args.adam_eps)
 
@@ -20,7 +20,7 @@ class Agent:
         # learn for a specific agent is called during training
         # we want to use the CPC loss function as part of training for this model
         # but the CPC is centralized; so we somehow need to share parameter updates in this central model???
-        log_loss = model()
+        log_loss = self.model()
         
         nce_loss = self.central_rep.get_loss()
         loss = nce_loss * nce_weight + log_loss * log_weight
