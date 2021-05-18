@@ -84,7 +84,7 @@ class CPC(nn.Module):
             nce += torch.sum(torch.diag(self.lsoftmax(total))) # nce is a tensor
         nce /= -1.*batch*self.timestep
         accuracy = 1.*correct.item()/batch
-
+        self.last_loss = nce # store nce loss for agents to make use of
         return accuracy, nce, hidden
 
     def predict(self, x, hidden):
@@ -98,6 +98,13 @@ class CPC(nn.Module):
 
         return output, hidden # return every frame
         #return output[:,-1,:], hidden # only return the last frame per utt
+
+    def get_loss(self):
+        return self.last_loss
+
+    def update_params(self, obs_buffer):
+        # need to combine obs_buffer and then push it further
+        pass
 
 def mesh_inputs():
     """
