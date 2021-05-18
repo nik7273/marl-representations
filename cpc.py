@@ -61,7 +61,7 @@ class CPC(nn.Module):
 
     def forward(self, x, hidden):
         batch = x.size()[0]
-        t_samples = torch.randint(self.seq_len/160-self.timestep, size=(1,)).long() # randomly pick time stamps
+        t_samples = torch.randint(self.seq_len//160-self.timestep, size=(1,)).long() # randomly pick time stamps
         # input sequence is N*C*L, e.g. 8*1*20480
         z = self.encoder(x)
         # encoded sequence is N*C*L, e.g. 8*512*128
@@ -69,16 +69,16 @@ class CPC(nn.Module):
         z = z.transpose(1,2)
         nce = 0 # average over timestep and batch
         encode_samples = torch.empty((self.timestep,batch,512)).float() # e.g. size 12*8*512
-        for i in np.arange(1, self.timestep+1):
+        for i in torch.arange(1, self.timestep+1):
             encode_samples[i-1] = z[:,t_samples+i,:].view(batch,512) # z_tk e.g. size 8*512
         forward_seq = z[:,:t_samples+1,:] # e.g. size 8*100*512
         output, hidden = self.gru(forward_seq, hidden) # output size e.g. 8*100*256
         c_t = output[:,t_samples,:].view(batch, 256) # c_t e.g. size 8*256
         pred = torch.empty((self.timestep,batch,512)).float() # e.g. size 12*8*512
-        for i in np.arange(0, self.timestep):
+        for i in torch.arange(0, self.timestep):
             linear = self.Wk[i]
             pred[i] = linear(c_t) # Wk*c_t e.g. size 8*512
-        for i in np.arange(0, self.timestep):
+        for i in torch.arange(0, self.timestep):
             total = torch.mm(encode_samples[i], torch.transpose(pred[i],0,1)) # e.g. size 8*8
             correct = torch.sum(torch.eq(torch.argmax(self.softmax(total), dim=0), torch.arange(0, batch))) # correct is a tensor
             nce += torch.sum(torch.diag(self.lsoftmax(total))) # nce is a tensor

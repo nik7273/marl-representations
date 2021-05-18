@@ -17,11 +17,13 @@ class Agent:
         return torch.randint(len(self.action_space), size=(1,)).long()
 
     def update_params(self):
-        # learn for a specific agent is called during trainingp
+        # learn for a specific agent is called during training
         # we want to use the CPC loss function as part of training for this model
         # but the CPC is centralized; so we somehow need to share parameter updates in this central model???
+        log_loss = model()
+        
         nce_loss = self.central_rep.get_loss()
-        loss = nce_loss + log_loss
+        loss = nce_loss * nce_weight + log_loss * log_weight
         
         optimizer.zero_grad()
         loss.backward()
