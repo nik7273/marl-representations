@@ -121,7 +121,7 @@ def main():
         env = pistonball_v4.env(n_pistons=20,
                                 local_ratio=0,
                                 time_penalty=-0.1,
-                                continuous=True,
+                                continuous=False,
                                 random_drop=True,
                                 random_rotate=True,
                                 ball_mass=0.75,

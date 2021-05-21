@@ -87,6 +87,7 @@ class Agent:
 
     # Acts based on single state (no batch)
     def act(self, state):
+        state=state.permute(2,0,1).cuda()
         with torch.no_grad():
             return (self.online_net(state.unsqueeze(0)) * self.support).sum(2).argmax(1).item()
 
