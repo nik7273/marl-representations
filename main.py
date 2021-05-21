@@ -7,12 +7,13 @@ from pettingzoo.butterfly import pistonball_v4
 from pettingzoo.butterfly import cooperative_pong_v2
 from ppo import PPO
 from dqn import DQN
+from cpc import CPC
 from stable_baselines3.ppo import CnnPolicy
 from agent import Agent, ObsBuffer, set_mode
 from memory import ReplayMemory
 
 def main():
-    seed = torch.randint(10000)
+    seed = torch.randint(0, 10000, ())
     parser = argparse.ArgumentParser()
     # parser.add_argument("--num_agents", type=int, default=None, help="Number of agents in simulation")
     parser.add_argument("--env",
@@ -71,7 +72,29 @@ def main():
                         type=float,
                         default=10,
                         help="Maximum of value distribution support")
-
+    parser.add_argument("--atoms",
+                        type=int,
+                        default=51,
+                        help="Discretised size of value distribution")
+    parser.add_argument("--architecture",
+                        type=str,
+                        default="data-efficient",
+                        choices=["canonical", "data-efficient"],
+                        help="Network architecture")
+    parser.add_argument("--history-length",
+                        type=int,
+                        default=4,
+                        help="Number of consecutive states processed")
+    parser.add_argument("--hidden-size",
+                        type=int,
+                        default=256,
+                        help="Network hidden size")
+    parser.add_argument("--noisy-std",
+                        type=float,
+                        default=0.1,                        
+                        help="Initial standard deviation of noisy linear layers")
+    args = parser.parse_args()
+    
     env = None
     if args.env == 'pistonball':
         env = pistonball_v4.parallel_env(n_pistons=20,
@@ -97,8 +120,20 @@ def main():
     env = ss.color_reduction_v0(env, mode='B')
     env = ss.resize_v0(env, x_size=84, y_size=84)
     env = ss.frame_stack_v1(env, 3)
-    env = ss.pettingzoo_env_to_vec_env_v0(env)
-    env = ss.concat_vec_envs_v0(env, 8, num_cpus=4, base_class='stable_baselines3')
+
+    env = ss.max_observation_v0(env, 2)
+    env = ss.frame_skip_v0(env, 4)
+    env = ss.sticky_actions_v0(env, repeat_action_probability=0.25)
+    env = ss.color_reduction_v0(env, mode="full")
+    env = ss.resize_v0(env, x_size=84, y_size=84)
+    env = ss.frame_stack_v1(env, 4)
+    env = ss.frame_skip_v0(env, 4)
+    env = ss.dtype_v0(env,np.float32)
+    env = ss.normalize_obs_v0(env)
+    env = ss.clip_reward_v0(env, -1, 1)
+    env = ss.reward_lambda_v0(env, change_reward_fn)
+    # env = ss.pettingzoo_env_to_vec_env_v0(env)
+    # env = ss.concat_vec_envs_v0(env, 8, num_cpus=4, base_class='stable_baselines3')
     env.reset()
 
     models = {} # agent models
@@ -121,7 +156,7 @@ def main():
         #             n_epochs=4,
         #             clip_range=0.2,
         #             clip_range_vf=1) # TODO: check and fix
-        model = DQN(args, env.action_spaces[agent])
+        model = DQN(args, env.action_spaces[agent].n)
         models[agent] = Agent(args, env.action_spaces[agent].n, model, central_rep)
         
         memory[agent] = ReplayMemory(args, args.buffer_size)
