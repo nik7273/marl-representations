@@ -8,7 +8,7 @@ from pettingzoo.butterfly import cooperative_pong_v2
 from ppo import PPO
 from dqn import DQN
 from stable_baselines3.ppo import CnnPolicy
-from agent import Agent, ObsBuffer, set_mod
+from agent import Agent, ObsBuffer, set_mode
 from memory import ReplayMemory
 
 def main():
