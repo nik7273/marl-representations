@@ -2,6 +2,7 @@ import os
 import argparse
 import torch
 import torch.nn as nn
+import numpy as np
 import supersuit as ss
 from pettingzoo.butterfly import pistonball_v4
 from pettingzoo.butterfly import cooperative_pong_v2
@@ -93,33 +94,53 @@ def main():
                         type=float,
                         default=0.1,                        
                         help="Initial standard deviation of noisy linear layers")
+    parser.add_argument("--learning-rate",
+                        type=float,
+                        default=0.0001,                        
+                        help="Learning")
+    parser.add_argument("--enable-cudnn",
+                        action="store_true",
+                        help="Enable cuDNN (faster but nondeterministic)")
+    parser.add_argument("--discount",
+                        type=float,
+                        default=0.99,
+                        help="Discount factor")
+    parser.add_argument("--priority-exponent",
+                        type=float,
+                        default=0.5,
+                        help="Prioritised experience replay exponent (originally denoted α)")
     args = parser.parse_args()
-    
+
+    def change_reward_fn(reward):
+        if reward == 200:
+            return -1
+        return reward/100
+
     env = None
     if args.env == 'pistonball':
-        env = pistonball_v4.parallel_env(n_pistons=20,
-                                         local_ratio=0,
-                                         time_penalty=-0.1,
-                                         continuous=True,
-                                         random_drop=True,
-                                         random_rotate=True,
-                                         ball_mass=0.75,
-                                         ball_friction=0.3,
-                                         ball_elasticity=1.5,
-                                         max_cycles=125)
+        env = pistonball_v4.env(n_pistons=20,
+                                local_ratio=0,
+                                time_penalty=-0.1,
+                                continuous=True,
+                                random_drop=True,
+                                random_rotate=True,
+                                ball_mass=0.75,
+                                ball_friction=0.3,
+                                ball_elasticity=1.5,
+                                max_cycles=125)
     elif args.env == "pong":
-        env = cooperative_pong_v2.parallel_env(ball_speed=9,
-                                               left_paddle_speed=12,
-                                               right_paddle_speed=12,
-                                               cake_paddle=True,
-                                               max_cycles=900,
-                                               bounce_randomness=False)
+        env = cooperative_pong_v2.env(ball_speed=9,
+                                      left_paddle_speed=12,
+                                      right_paddle_speed=12,
+                                      cake_paddle=True,
+                                      max_cycles=900,
+                                      bounce_randomness=False)
     else:
         raise Exception("bad env argument")
     
-    env = ss.color_reduction_v0(env, mode='B')
-    env = ss.resize_v0(env, x_size=84, y_size=84)
-    env = ss.frame_stack_v1(env, 3)
+    # env = ss.color_reduction_v0(env, mode='B')
+    # env = ss.resize_v0(env, x_size=84, y_size=84)
+    # env = ss.frame_stack_v1(env, 3)
 
     env = ss.max_observation_v0(env, 2)
     env = ss.frame_skip_v0(env, 4)

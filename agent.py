@@ -5,6 +5,7 @@ Informed by https://github.com/Kaixhin/Rainbow/blob/master/agent.py
 import os
 import torch
 import torch.nn as nn
+from torch import optim
 from collections import deque 
 from dqn import DQN
 
