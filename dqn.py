@@ -68,36 +68,19 @@ class DQN(nn.Module):
     self.fc_z_v = NoisyLinear(args.hidden_size, self.atoms, std_init=args.noisy_std)
     self.fc_z_a = NoisyLinear(args.hidden_size, action_space * self.atoms, std_init=args.noisy_std)
 
-    self.W_h = nn.Parameter(torch.rand(self.conv_output_size, args.hidden_size))
-    self.W_c = nn.Parameter(torch.rand(args.hidden_size, 128))
-    self.b_h = nn.Parameter(torch.zeros(args.hidden_size))
-    self.b_c = nn.Parameter(torch.zeros(128))
-    self.W = nn.Parameter(torch.rand(128, 128))
-    self.ln1 = nn.LayerNorm(args.hidden_size)
-    self.ln2 = nn.LayerNorm(128)
-
   def forward(self, x, log=False):
     x = self.convs(x)
     x = x.view(-1, self.conv_output_size)
     v = self.fc_z_v(F.relu(self.fc_h_v(x)))  # Value stream
     a = self.fc_z_a(F.relu(self.fc_h_a(x)))  # Advantage stream
-    h=None
-    
-    # figure out whether I need this
-    if self.aux:
-        h = torch.matmul(x, self.W_h) + self.b_h # Contrastive head
-        h = self.ln1(h)
-        h = F.relu(h)
-        h = torch.matmul(h, self.W_c) + self.b_c # Contrastive head
-        h = self.ln2(h)
-        
+
     v, a = v.view(-1, 1, self.atoms), a.view(-1, self.action_space, self.atoms)
     q = v + a - a.mean(1, keepdim=True)  # Combine streams
     if log:  # Use log softmax for numerical stability
       q = F.log_softmax(q, dim=2)  # Log probabilities with action over second dimension
     else:
       q = F.softmax(q, dim=2)  # Probabilities with action over second dimension
-    return q, h
+    return q
 
   def reset_noise(self):
     for name, module in self.named_children():
