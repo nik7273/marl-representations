@@ -15,6 +15,7 @@ class Agent:
         self.args = args
         self.model = model # ex. PPO, but starting simple with DQN
         self.online_net = self.model
+        self.action_space = action_space
         self.central_rep = central_rep
         self.optimizer = optim.Adam(self.model.parameters(), lr=args.learning_rate, eps=args.adam_eps)
         self.batch_size = args.batch_size # is there a different batch size between them?

@@ -12,6 +12,7 @@ from cpc import CPC
 from stable_baselines3.ppo import CnnPolicy
 from agent import Agent, ObsBuffer, set_mode
 from memory import ReplayMemory
+from tqdm import tqdm
 
 def main():
     seed = torch.randint(0, 10000, ())
@@ -109,8 +110,18 @@ def main():
                         type=float,
                         default=0.5,
                         help="Prioritised experience replay exponent (originally denoted α)")
+    parser.add_argument("--seed", type=int, default=seed, help="Random seed")
     args = parser.parse_args()
 
+    np.random.seed(args.seed)
+    torch.manual_seed(np.random.randint(1, 10000))
+    if torch.cuda.is_available():
+        args.device = torch.device("cuda")
+        torch.cuda.manual_seed(np.random.randint(1, 10000))
+        torch.backends.cudnn.enabled = args.enable_cudnn
+    else:
+        args.device = torch.device("cpu")
+    
     def change_reward_fn(reward):
         if reward == 200:
             return -1
@@ -237,7 +248,7 @@ def main():
             if t >= args.learn_start:
                 memory[agent].priority_weight = min(memory[agent].priority_weight + priority_weight_increase, 1)
 
-                if i % args.update_period:
+                if i % args.update_period == 0:
                     obs_buffer.append(observation)
                     # Train individual agent
                     models[agent].update_params(memory[agent], central_rep.get_loss())
