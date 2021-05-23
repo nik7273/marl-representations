@@ -37,6 +37,7 @@ class CPC(nn.Module):
         self.Wk  = nn.ModuleList([nn.Linear(256, 512) for i in range(timestep)])
         self.softmax  = nn.Softmax()
         self.lsoftmax = nn.LogSoftmax()
+        self.last_loss = 0
 
         def _weights_init(m):
             if isinstance(m, nn.Linear):

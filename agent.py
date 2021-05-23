@@ -14,7 +14,7 @@ class Agent:
     def __init__(self, args, action_space, model, central_rep):
         self.args = args
         self.model = model # ex. PPO, but starting simple with DQN
-        self.online_net = self.model
+        self.online_net = self.model.to(device=args.device)
         self.action_space = action_space
         self.central_rep = central_rep
         self.optimizer = optim.Adam(self.model.parameters(), lr=args.learning_rate, eps=args.adam_eps)
@@ -34,7 +34,7 @@ class Agent:
             param.requires_grad = False
 
     # DQN parameter update
-    def update_params(self, memory):
+    def update_params(self, memory, central_rep_loss):
         idxs, states, actions, returns, next_states, nonterminals, weights = memory.sample(self.batch_size)
         log_ps, _ = self.model(states, log=True)  # Log probabilities log p(s_t, ·; θonline)
         log_ps_a = log_ps[range(self.batch_size), actions]  # log p(s_t, a_t; θonline)
@@ -64,6 +64,7 @@ class Agent:
 
 
         loss = -torch.sum(m * log_ps_a, 1)  # Cross-entropy loss (minimises DKL(m||p(s_t, a_t)))
+        loss += central_rep_loss
         self.online_net.zero_grad()
         (weights * loss).mean().backward()  # Backpropagate importance-weighted minibatch loss
         clip_grad_norm_(self.online_net.parameters(), self.norm_clip)  # Clip gradients by L2 norm

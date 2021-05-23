@@ -111,6 +111,14 @@ def main():
                         default=0.5,
                         help="Prioritised experience replay exponent (originally denoted α)")
     parser.add_argument("--seed", type=int, default=seed, help="Random seed")
+    parser.add_argument("--reward-clip",
+                        type=int,
+                        default=0,
+                        help="Reward clipping (0 to disable)")
+    parser.add_argument("--replay-frequency",
+                        type=int,
+                        default=1,
+                        help="Frequency of sampling from memory")
     args = parser.parse_args()
 
     np.random.seed(args.seed)
@@ -234,14 +242,22 @@ def main():
                 if t > args.max_horizon:
                     converged = True
                     break
+            if t % args.replay_frequency == 0:
+                    dqns[agent].reset_noise()  # Draw a new set of noisy weights
 
             observation, reward, done, info = env.last()
 
             action = models[agent].act(torch.tensor(observation))
+            if t < args.learn_start:
+                action = np.random.randint(0,env.action_spaces[agent].n)
             if not done:
                 env.step(action)
             else:
                 env.step(None)
+            if args.reward_clip > 0:
+                reward = max(
+                    min(reward, args.reward_clip), -args.reward_clip
+                )  # Clip rewards
 
             memory[agent].append(torch.tensor(observation), action, reward, done)
 
@@ -254,6 +270,10 @@ def main():
                     models[agent].update_params(memory[agent], central_rep.get_loss())
                     # Train central representation
                     central_rep.update_params(observation_buffer)
+
+                # Update target network
+                if T % args.target_update == 0:
+                    models[agent].update_target_net()
 
 
 if __name__ == '__main__':
