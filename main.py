@@ -243,7 +243,7 @@ def main():
                     converged = True
                     break
             if t % args.replay_frequency == 0:
-                    dqns[agent].reset_noise()  # Draw a new set of noisy weights
+                    models[agent].reset_noise()  # Draw a new set of noisy weights
 
             observation, reward, done, info = env.last()
 
