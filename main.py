@@ -119,6 +119,10 @@ def main():
                         type=int,
                         default=1,
                         help="Frequency of sampling from memory")
+    parser.add_argument("--history-length",
+                        type=int,
+                        default=4,
+                        help="Number of consecutive states processed")
     args = parser.parse_args()
 
     np.random.seed(args.seed)
@@ -243,7 +247,7 @@ def main():
                     converged = True
                     break
             if t % args.replay_frequency == 0:
-                    models[agent].reset_noise()  # Draw a new set of noisy weights
+                models[agent].reset_noise()  # Draw a new set of noisy weights
 
             observation, reward, done, info = env.last()
 
