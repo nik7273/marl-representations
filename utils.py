@@ -6,11 +6,9 @@ import numpy as np
 import supersuit as ss
 from pettingzoo.butterfly import pistonball_v4
 from pettingzoo.butterfly import cooperative_pong_v2
-from ppo import PPO
 from dqn import DQN
 from cpc import CPC
-from stable_baselines3.ppo import CnnPolicy
-from agent import Agent, ObsBuffer, set_mode
+from agent import Agent, ObsBuffer
 from memory import ReplayMemory
 from tqdm import tqdm
 
