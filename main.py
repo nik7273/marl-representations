@@ -14,10 +14,9 @@ from agent import Agent, ObsBuffer, set_mode
 from memory import ReplayMemory
 from tqdm import tqdm
 
-def main():
+def get_args():
     seed = torch.randint(0, 10000, ())
     parser = argparse.ArgumentParser()
-    # parser.add_argument("--num_agents", type=int, default=None, help="Number of agents in simulation")
     parser.add_argument("--env",
                         type=str,
                         default=None,
@@ -110,7 +109,10 @@ def main():
                         type=float,
                         default=0.5,
                         help="Prioritised experience replay exponent (originally denoted α)")
-    parser.add_argument("--seed", type=int, default=seed, help="Random seed")
+    parser.add_argument("--seed",
+                        type=int,
+                        default=seed,
+                        help="Random seed")
     parser.add_argument("--reward-clip",
                         type=int,
                         default=0,
@@ -119,8 +121,17 @@ def main():
                         type=int,
                         default=1,
                         help="Frequency of sampling from memory")
+    parser.add_argument('--norm-clip',
+                        type=float,
+                        default=10,                        
+                        help='Max L2 norm for gradient clipping')
+    parser.add_argument("--target-update",
+                        type=int,
+                        default=int(2e3),
+                        help="Number of steps after which to update target network")
     args = parser.parse_args()
 
+    # device
     np.random.seed(args.seed)
     torch.manual_seed(np.random.randint(1, 10000))
     if torch.cuda.is_available():
@@ -129,12 +140,15 @@ def main():
         torch.backends.cudnn.enabled = args.enable_cudnn
     else:
         args.device = torch.device("cpu")
-    
+
+    return args
+
+def init_env(args):
     def change_reward_fn(reward):
         if reward == 200:
             return -1
         return reward/100
-
+    
     env = None
     if args.env == 'pistonball':
         env = pistonball_v4.env(n_pistons=20,
@@ -155,11 +169,7 @@ def main():
                                       max_cycles=900,
                                       bounce_randomness=False)
     else:
-        raise Exception("bad env argument")
-    
-    # env = ss.color_reduction_v0(env, mode='B')
-    # env = ss.resize_v0(env, x_size=84, y_size=84)
-    # env = ss.frame_stack_v1(env, 3)
+        raise Exception("Bad argument: --env")
 
     env = ss.max_observation_v0(env, 2)
     env = ss.frame_skip_v0(env, 4)
@@ -176,6 +186,9 @@ def main():
     # env = ss.concat_vec_envs_v0(env, 8, num_cpus=4, base_class='stable_baselines3')
     env.reset()
 
+    return env
+
+def init_models(args, env):
     models = {} # agent models
     memory = {} # execution memory
     val_memory = {} # validation memory
@@ -183,32 +196,18 @@ def main():
     central_rep = CPC(args.num_timesteps, args.batch_size, args.seq_len)
 
     for agent in env.agents:
-        # model = PPO(CnnPolicy,
-        #             env,
-        #             verbose=3,
-        #             gamma=0.99,
-        #             n_steps=125,
-        #             ent_coef=0.01,
-        #             learning_rate=0.00025,
-        #             vf_coef=0.5,
-        #             max_grad_norm=0.5,
-        #             gae_lambda=0.95,
-        #             n_epochs=4,
-        #             clip_range=0.2,
-        #             clip_range_vf=1) # TODO: check and fix
         model = DQN(args, env.action_spaces[agent].n)
         models[agent] = Agent(args, env.action_spaces[agent].n, model, central_rep)
         
+        # Construct working memory
         memory[agent] = ReplayMemory(args, args.buffer_size)
-
-        priority_weight_increase = (1 - args.priority_weight) / (
-            args.max_horizon - args.learn_start
-        )
 
         # Construct validation memory
         val_memory[agent] = ReplayMemory(args, args.eval_buffer_size)
 
+    return models, memory, val_memory, central_rep
 
+def prefill_buffer(args, env, val_memory):
     # prefill buffer before training
     t, converged = 0, False
     while not converged:
@@ -225,12 +224,18 @@ def main():
             env.step(action)
             val_memory[agent].append(torch.tensor(observation), None, None, done)
             i += 1
+    
 
+def train(args, env, models, memory, val_memory, central_rep):
     # Training
-    set_mode(models)
+    set_mode(models, mode="train")
     t, converged = 0, False
     progress_bar = tqdm(total=args.max_horizon)
     obs_buffer = ObsBuffer(args.num_timesteps)
+
+    priority_weight_increase = (1 - args.priority_weight) / (
+        args.max_horizon - args.learn_start
+    )
     while not converged:
         env.reset()
         i = 0
@@ -269,12 +274,42 @@ def main():
                     # Train individual agent
                     models[agent].update_params(memory[agent], central_rep.get_loss())
                     # Train central representation
-                    central_rep.update_params(observation_buffer)
+                    central_rep.update_params(obs_buffer)
 
                 # Update target network
-                if T % args.target_update == 0:
+                if t % args.target_update == 0:
                     models[agent].update_target_net()
 
+def eval(args, env, models, val_memory):
+    # init metrics map
+    metrics = {'steps': [], 'rewards': {}, 'Qs': {}, 'best_avg_reward': {}}
+    for agent in env.agents:
+        metrics['rewards'][agent] = []
+        metrics['Qs'][agent] = []
+        metrics['best_avg_reward'][agent] = -float("inf")
 
+    # evaluate
+    set_mode(models, mode="eval")  # Set DQN (online network) to evaluation mode
+    avg_reward, avg_Q = test_multi_agent_dqn(
+        args, 0, models, val_memory, metrics, results_dir, evaluate=True
+    )  # Test
+    print("Avg. reward: " + str(avg_reward) + " | Avg. Q: " + str(avg_Q))
+
+def main():
+    args = get_args()
+
+    env = init_env(args)
+
+    models, memory, val_memory, central_rep = init_models(args, env)
+    
+    prefill_buffer(args, env, val_memory)
+
+    if args.mode == "train":
+        train(args, env, models, memory, val_memory, central_rep)
+    elif args.mode == "eval":
+        evaluate(args, env, models, memory, val_memory, central_rep)
+    else:
+        raise Exception("Bad argument: --mode")
+                    
 if __name__ == '__main__':
     main()

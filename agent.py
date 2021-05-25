@@ -8,7 +8,7 @@ import torch.nn as nn
 from torch import optim
 from collections import deque 
 from dqn import DQN
-
+from torch.nn.utils import clip_grad_norm_
 
 class Agent:
     def __init__(self, args, action_space, model, central_rep):
@@ -22,8 +22,11 @@ class Agent:
         self.Vmin = args.V_min
         self.Vmax = args.V_max
         self.atoms = args.atoms
+        self.n = args.multi_step
         self.support = torch.linspace(args.V_min, args.V_max, self.atoms).to(device=args.device)  # Support (range) of z
         self.delta_z = (args.V_max - args.V_min) / (self.atoms - 1)
+        self.discount = args.discount
+        self.norm_clip = args.norm_clip
 
         self.online_net.train()
 
@@ -36,12 +39,12 @@ class Agent:
     # DQN parameter update
     def update_params(self, memory, central_rep_loss):
         idxs, states, actions, returns, next_states, nonterminals, weights = memory.sample(self.batch_size)
-        log_ps, _ = self.model(states, log=True)  # Log probabilities log p(s_t, ·; θonline)
+        log_ps = self.online_net(states, log=True)  # Log probabilities log p(s_t, ·; θonline)
         log_ps_a = log_ps[range(self.batch_size), actions]  # log p(s_t, a_t; θonline)
 
         with torch.no_grad():
             # Calculate nth next state probabilities
-            pns = self.model(next_states) # Probabilities p(s_t+n, ·; θonline)
+            pns = self.online_net(next_states) # Probabilities p(s_t+n, ·; θonline)
             dns = self.support.expand_as(pns) * pns # Distribution d_t+n = (z, p(s_t+n, ·; θonline))
             argmax_indices_ns = dns.sum(2).argmax(1) # Perform argmax action selection using online network: argmax_a[(z, p(s_t+n, a; θonline))]
             pns = self.target_net(next_states)  # Probabilities p(s_t+n, ·; θtarget)
@@ -68,7 +71,7 @@ class Agent:
         self.online_net.zero_grad()
         (weights * loss).mean().backward()  # Backpropagate importance-weighted minibatch loss
         clip_grad_norm_(self.online_net.parameters(), self.norm_clip)  # Clip gradients by L2 norm
-        self.optimiser.step()
+        self.optimizer.step()
 
         memory.update_priorities(idxs, loss.detach().cpu().numpy())  # Update priorities of sampled transitions
         
