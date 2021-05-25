@@ -28,6 +28,7 @@ class Agent:
         self.delta_z = (args.V_max - args.V_min) / (self.atoms - 1)
         self.discount = args.discount
         self.norm_clip = args.norm_clip
+        self.device = args.device
 
         self.online_net.train()
 
@@ -82,7 +83,7 @@ class Agent:
 
     # Acts based on single state (no batch)
     def act(self, state):
-        state=state.permute(2,0,1).cuda()
+        state=state.permute(2,0,1).to(device=self.device)
         with torch.no_grad():
             return (self.online_net(state.unsqueeze(0)) * self.support).sum(2).argmax(1).item()
 
