@@ -67,7 +67,7 @@ class Agent:
 
 
         loss = -torch.sum(m * log_ps_a, 1)  # Cross-entropy loss (minimises DKL(m||p(s_t, a_t)))
-        loss += central_rep_loss
+        loss += central_rep_loss # nce_loss, TODO: modify weighting later
         self.online_net.zero_grad()
         (weights * loss).mean().backward()  # Backpropagate importance-weighted minibatch loss
         clip_grad_norm_(self.online_net.parameters(), self.norm_clip)  # Clip gradients by L2 norm
@@ -75,17 +75,6 @@ class Agent:
 
         memory.update_priorities(idxs, loss.detach().cpu().numpy())  # Update priorities of sampled transitions
         
-        # learn for a specific agent is called during training
-        # we want to use the CPC loss function as part of training for this model
-        # but the CPC is centralized; so we somehow need to share parameter updates in this central model???
-        # log_loss = self.model()
-        
-        # nce_loss = self.central_rep.get_loss()
-        # loss = nce_loss * nce_weight + log_loss * log_weight
-        
-        # optimizer.zero_grad()
-        # loss.backward()
-        # optimizer.step()
 
     def reset_noise(self):
         self.online_net.reset_noise()
@@ -118,16 +107,6 @@ class Agent:
     def eval(self):
       self.online_net.eval()
         
-def set_mode(models, mode="train"):
-    if mode == "train":
-        for agent in models.keys():
-            models[agent].train()
-    elif mode == "eval":
-        for agent in models.keys():
-            models[agent].eval()
-    else:
-        raise Exception("mode does not exist")
-
 class ObsBuffer:
     def __init__(self, max_len):
         self.buf = deque([])
