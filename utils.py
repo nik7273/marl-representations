@@ -135,6 +135,10 @@ def get_args():
                         type=str,
                         default="results",
                         help="directory where results should be placed")
+    parser.add_argument("--eval-episodes",
+                        type=str,
+                        default=50,
+                        help="number of evaluation episodes to average over")
     args = parser.parse_args()
 
     # device
