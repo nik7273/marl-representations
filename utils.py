@@ -131,6 +131,10 @@ def get_args():
                         type=int,
                         default=int(2e3),
                         help="Number of steps after which to update target network")
+    parser.add_argument("--results-dir",
+                        type=str,
+                        default="results",
+                        help="directory where results should be placed")
     args = parser.parse_args()
 
     # device

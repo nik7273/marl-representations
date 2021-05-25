@@ -81,7 +81,7 @@ def evaluate(args, env, models, val_memory, central_rep):
     # evaluate
     set_mode(models, mode="eval")  # Set DQN (online network) to evaluation mode
     avg_reward, avg_Q = test_model(
-        args, 0, models, val_memory, metrics, results_dir, evaluate=True
+        args, 0, models, val_memory, metrics, args.results_dir, evaluate=True
     )  # Test
     print("Avg. reward: " + str(avg_reward) + " | Avg. Q: " + str(avg_Q))
 
