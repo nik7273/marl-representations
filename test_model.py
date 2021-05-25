@@ -19,7 +19,7 @@ def test_model(args, t, models, val_memory, metrics, results_dir, evaluate=False
     obs_list = {agent: [] for agent in env.agents}
     best_total_reward = -float("inf")
 
-    for _ in range(args.evaluation_episodes):
+    for _ in range(args.eval_episodes):
         env.reset()
         reward_sum = defaultdict(lambda: 0)
         curr_obs_list = {agent: [] for agent in env.agents}
