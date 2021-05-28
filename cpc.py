@@ -34,8 +34,8 @@ class CPC(nn.Module):
             nn.ReLU(inplace=True)
         )
         self.gru = nn.GRU(512, 256, num_layers=1, bidirectional=False, batch_first=True)
-        self.Wk  = nn.ModuleList([nn.Linear(256, 512) for i in range(timestep)])
-        self.softmax  = nn.Softmax()
+        self.Wk = nn.ModuleList([nn.Linear(256, 512) for i in range(timestep)])
+        self.softmax = nn.Softmax()
         self.lsoftmax = nn.LogSoftmax()
         self.last_loss = 0
 
@@ -62,7 +62,7 @@ class CPC(nn.Module):
 
     def forward(self, x, hidden):
         batch = x.size()[0]
-        t_samples = torch.randint(self.seq_len//160-self.timestep, size=(1,)).long() # randomly pick time stamps
+        t_samples = torch.randint(self.seq_len//160-self.timestep, size=(1,)).long() # randomly pick timestamps
         # input sequence is N*C*L, e.g. 8*1*20480
         z = self.encoder(x)
         # encoded sequence is N*C*L, e.g. 8*512*128
@@ -105,10 +105,19 @@ class CPC(nn.Module):
 
     def update_params(self, obs_buffer):
         # need to combine obs_buffer and then push it further
-        pass
+        obs_buffer
+        central_loss = 0
+        with torch.no_grad():
+            
+        optimizer.zero_grad()
+        central_loss.backward()
+        optimizer.step()
 
-def mesh_inputs():
+def mesh_inputs(obs_buffers):
     """
     Combine input observations to feed into CPC.
     """
-    pass
+    cpc_input = torch.empty()
+    for b in obs_buffers:
+        cpc_input.cat(b)
+    return cpc_input
