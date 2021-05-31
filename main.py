@@ -11,11 +11,13 @@ from stable_baselines3.ppo import CnnPolicy
 from ppo import PPO
 from dqn import DQN
 from cpc import CPC
+from cpc import mesh_inputs
 from agent import Agent, ObsBuffer
 from memory import ReplayMemory
 from utils import get_args, init_env, init_models, prefill_buffer, set_mode
 from test_model import test_model
 
+# TODO: Need to call mesh_inputs function somewhere here
 def train(args, env, models, memory, val_memory, central_rep):
     # Training
     set_mode(models, mode="train")
@@ -60,12 +62,11 @@ def train(args, env, models, memory, val_memory, central_rep):
                 memory[agent].priority_weight = min(memory[agent].priority_weight + priority_weight_increase, 1)
 
                 if i % args.update_period == 0:
-                    obs_buffer.append(observation)
+                    obs_buffer.append(observation) # here is where mesh_inputs() would be called
                     # Train individual agent
                     models[agent].update_params(memory[agent], central_rep.get_loss())
                     # Train central representation
                     central_rep.update_params(obs_buffer)
-
                 # Update target network
                 if t % args.target_update == 0:
                     models[agent].update_target_net()

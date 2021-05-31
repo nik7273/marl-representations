@@ -86,6 +86,7 @@ class CPC(nn.Module):
         nce /= -1.*batch*self.timestep
         accuracy = 1.*correct.item()/batch
         self.last_loss = nce # store nce loss for agents to make use of
+        print(self.last_loss)
         return accuracy, nce, hidden
 
     def predict(self, x, hidden):
@@ -105,19 +106,13 @@ class CPC(nn.Module):
 
     def update_params(self, obs_buffer):
         # need to combine obs_buffer and then push it further
-        obs_buffer
-        central_loss = 0
-        with torch.no_grad():
-            
-        optimizer.zero_grad()
-        central_loss.backward()
-        optimizer.step()
+        # hidden = torch.empty()
+        hidden = self.init_hidden(self.batch_size)
+        self.forward(obs_buffer, hidden) 
+        self.central_loss.backward()
 
-def mesh_inputs(obs_buffers):
+def mesh_inputs(env, obs_buffer, agent_obervationss):
     """
-    Combine input observations to feed into CPC.
+    Combine input observations to feed into CPC. Currently just concatenate the buffers for now in main.py
     """
-    cpc_input = torch.empty()
-    for b in obs_buffers:
-        cpc_input.cat(b)
-    return cpc_input
+    pass
