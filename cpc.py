@@ -106,12 +106,11 @@ class CPC(nn.Module):
 
     def update_params(self, obs_buffer):
         # need to combine obs_buffer and then push it further
-        # hidden = torch.empty()
         hidden = self.init_hidden(self.batch_size)
         self.forward(obs_buffer, hidden) 
         self.central_loss.backward()
 
-def mesh_inputs(env, obs_buffer, agent_obervationss):
+def mesh_inputs(env, obs_buffer, agent_obervations):
     """
     Combine input observations to feed into CPC. Currently just concatenate the buffers for now in main.py
     """
