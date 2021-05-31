@@ -106,7 +106,7 @@ class CPC(nn.Module):
 
     def update_params(self, obs_buffer):
         # need to combine obs_buffer and then push it further
-        hidden = self.init_hidden(self.batch_size)
+        hidden = self.init_hidden(self.batch_size, use_gpu=False)
         self.forward(obs_buffer, hidden) 
         self.central_loss.backward()
 
