@@ -1,6 +1,7 @@
 import os
 import argparse
 import torch
+from torch.optim as optim
 import torch.nn as nn
 import numpy as np
 import supersuit as ss
@@ -11,6 +12,7 @@ from cpc import CPC
 from agent import Agent, ObsBuffer
 from memory import ReplayMemory
 from tqdm import tqdm
+from optimizer import ScheduledOptim
 
 def get_args():
     seed = torch.randint(0, 10000, ())
@@ -215,7 +217,13 @@ def init_models(args, env):
         # Construct validation memory
         val_memory[agent] = ReplayMemory(args, args.eval_buffer_size)
 
-    return models, memory, val_memory, central_rep
+    central_rep_optimizer = ScheduledOptim(
+        optim.Adam(
+            filter(lambda p: p.requires_grad, model.parameters()), 
+            betas=(0.9, 0.98), eps=1e-09, weight_decay=1e-4, amsgrad=True),
+        args.n_warmup_steps)
+
+    return models, memory, val_memory, central_rep, central_rep_optimizer
 
 def prefill_buffer(args, env, val_memory):
     # prefill buffer before training

@@ -104,11 +104,13 @@ class CPC(nn.Module):
     def get_loss(self):
         return self.last_loss
 
-    def update_params(self, obs_buffer):
+    def update_params(self, obs_buffer, optimizer):
         # need to combine obs_buffer and then push it further
         hidden = self.init_hidden(self.batch_size, use_gpu=False)
-        self.forward(obs_buffer, hidden) 
+        self.forward(obs_buffer, hidden)
+        optimizer.zero_grad()
         self.central_loss.backward()
+        optimizer.step()
 
 def mesh_inputs(env, obs_buffer, agent_obervations):
     """
