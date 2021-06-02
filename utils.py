@@ -219,9 +219,10 @@ def init_models(args, env):
 
     central_rep_optimizer = ScheduledOptim(
         optim.Adam(
-            filter(lambda p: p.requires_grad, model.parameters()), 
+            filter(lambda p: p.requires_grad, central_rep.parameters()), 
             betas=(0.9, 0.98), eps=1e-09, weight_decay=1e-4, amsgrad=True),
-        args.n_warmup_steps)
+        # args.n_warmup_steps) # add param
+            100)
 
     return models, memory, val_memory, central_rep, central_rep_optimizer
 
