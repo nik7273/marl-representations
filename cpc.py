@@ -106,9 +106,9 @@ class CPC(nn.Module):
 
     def update_params(self, obs_buffer, optimizer):
         # need to combine obs_buffer and then push it further
-        hidden = self.init_hidden(self.batch_size, use_gpu=False)
-        self.forward(obs_buffer, hidden)
         optimizer.zero_grad()
+        hidden = self.init_hidden(self.batch_size, use_gpu=False)
+        self.forward(obs_buffer.buf, hidden)
         self.central_loss.backward()
         optimizer.step()
 

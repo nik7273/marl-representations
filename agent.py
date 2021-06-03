@@ -108,17 +108,32 @@ class Agent:
 
     def eval(self):
       self.online_net.eval()
-        
+
 class ObsBuffer:
     def __init__(self, max_len):
-        self.buf = deque([])
+        self.buf = torch.tensor([])
         self.max_len = max_len
 
     def append(self, new_obs):
-        if len(self.buf) >= self.max_len:
-            self.buf.popleft()
-        self.buf.append(new_obs)
-
+        if self.buf.size()[0] >= self.max_len:
+            self.buf = torch.cat((self.buf[1:], torch.tensor([new_obs])))
+        else:
+            self.buf = torch.cat((self.buf, torch.tensor([new_obs])))
+    
     def drain(self):
-        while self.buf:
-            self.buf.popleft()
+        pass
+
+# class ObsBuffer:
+#     def __init__(self, max_len):
+#         self.buf = deque([])
+#         self.max_len = max_len
+
+#     def append(self, new_obs):
+#         # if len(self.buf) >= self.max_len:
+#         if self.buf.size()[0] >= self.max_len:
+#             self.buf.popleft()
+#         self.buf.append(new_obs)
+
+#     def drain(self):
+#         while self.buf:
+#             self.buf.popleft()

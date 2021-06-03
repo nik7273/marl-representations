@@ -1,7 +1,7 @@
 import os
 import argparse
 import torch
-from torch.optim as optim
+import torch.optim as optim
 import torch.nn as nn
 import numpy as np
 import supersuit as ss
@@ -141,6 +141,10 @@ def get_args():
                         type=int,
                         default=50,
                         help="number of evaluation episodes to average over")
+    parser.add_argument("--crep-optimizer-num-warmup-steps",
+                        type=int,
+                        default=int(50),
+                        help="A value used to calculate the new lr for the central rep optimizer")
     args = parser.parse_args()
 
     # device
@@ -221,8 +225,7 @@ def init_models(args, env):
         optim.Adam(
             filter(lambda p: p.requires_grad, central_rep.parameters()), 
             betas=(0.9, 0.98), eps=1e-09, weight_decay=1e-4, amsgrad=True),
-        # args.n_warmup_steps) # add param
-            100)
+            args.n_warmup_steps)
 
     return models, memory, val_memory, central_rep, central_rep_optimizer
 
