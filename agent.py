@@ -121,7 +121,7 @@ class ObsBuffer:
             self.buf = torch.cat((self.buf, torch.tensor([new_obs])))
     
     def drain(self):
-        pass
+        self.buf = torch.tensor([])
 
 # class ObsBuffer:
 #     def __init__(self, max_len):
