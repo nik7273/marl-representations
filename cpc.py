@@ -61,6 +61,7 @@ class CPC(nn.Module):
         else: return torch.zeros(1, batch_size, 256)
 
     def forward(self, x, hidden):
+        print("obs_buffer_size:", x.size())
         batch = x.size()[0]
         t_samples = torch.randint(self.seq_len//160-self.timestep, size=(1,)).long() # randomly pick timestamps
         # input sequence is N*C*L, e.g. 8*1*20480

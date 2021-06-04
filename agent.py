@@ -129,8 +129,7 @@ class ObsBuffer:
 #         self.max_len = max_len
 
 #     def append(self, new_obs):
-#         # if len(self.buf) >= self.max_len:
-#         if self.buf.size()[0] >= self.max_len:
+#         if len(self.buf) >= self.max_len:
 #             self.buf.popleft()
 #         self.buf.append(new_obs)
 
